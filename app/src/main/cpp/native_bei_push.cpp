@@ -263,7 +263,7 @@ JNIEXPORT void JNICALL
 Java_com_example_beipush_BeiPush_beiPushRelease(JNIEnv *env, jobject instance) {
     LOGI("beiPushRelease");
     DELETE(videoPush);
-//    DELETE(audioLive);
+    DELETE(audioPush);
 }
 
 extern "C" //设置视频编码信息
@@ -291,20 +291,20 @@ JNIEXPORT void JNICALL
 Java_com_example_beipush_BeiPush_beiPushSetAudioEncoderInfo(JNIEnv *env, jobject instance,
                                                             jint sampleRateInHz, jint channels) {
 
-//    if(audioLive){
-//        audioLive->setAudioEncInfo(sampleRateInHz,channels);
-//    }
+    if(audioPush){
+        audioPush->setAudioEncInfo(sampleRateInHz,channels);
+    }
 }
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_beipush_BeiPush_beiPushSendAudio(JNIEnv *env, jobject instance,
                                                   jbyteArray data_) {
-//    if(!videoLive || !readyPushing){
-//        return;
-//    }
-//    jbyte *data = env->GetByteArrayElements(data_, NULL);
-//    audioLive->encodeData(data);
-//    env->ReleaseByteArrayElements(data_, data, 0);
+    if(!videoPush || !readyPushing){
+        return;
+    }
+    jbyte *data = env->GetByteArrayElements(data_, NULL);
+    audioPush->encodeData(data);
+    env->ReleaseByteArrayElements(data_, data, 0);
 }
 extern "C"
 JNIEXPORT void JNICALL
