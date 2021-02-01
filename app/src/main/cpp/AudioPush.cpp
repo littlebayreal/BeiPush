@@ -57,7 +57,7 @@ void AudioPush::setAudioEncInfo(int samplesInHZ, int channels) {
     audioCodecContext->channel_layout = AV_CH_LAYOUT_STEREO;
     audioCodecContext->channels = av_get_channel_layout_nb_channels(audioCodecContext->channel_layout);
     audioCodecContext->bit_rate = 64000;
-//    audio_codec_ctx->frame_size = 1024;
+//    audioCodecContext->frame_size = 1024;
 //    if (pFormatCtx->oformat->flags & AVFMT_GLOBALHEADER) {
     audioCodecContext->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
 //    }
@@ -126,6 +126,10 @@ void AudioPush::encodeData(int8_t *data) {
     }
     if(callBack)
         callBack(aac_pkt);
+}
+//固定一帧可输入的最大样本为1024个
+u_long AudioPush::getInputSamples() {
+    return 1024;
 }
 void AudioPush::setUrl(char *_url) {
     url = _url;

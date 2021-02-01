@@ -18,12 +18,12 @@ import java.util.Arrays;
 import static com.example.beipush.LiveActivity.convertByteToColor;
 import static com.example.beipush.LiveActivity.saveBitmap;
 
-class BeiPush {
+class BeiPush implements AudioLive.OnAudioCaptureListener{
    private static final String TAG = "BeiPush";
    static {
        System.loadLibrary("native-lib");
    }
-//   private AudioLive audioLive;
+   private AudioLive audioLive;
    private Activity activity;
    private int mBitrate;
    private int mFps;
@@ -37,8 +37,9 @@ class BeiPush {
       this.mBitrate = bitrate;
       this.mFps = fps;
       beiPushInit(url);
-//      audioLive = new AudioLive(this);
-//      audioLive.setOnAudioCaptureListener(this);
+      //初始化录音
+      audioLive = new AudioLive(this);
+      audioLive.setOnAudioCaptureListener(this);
    }
    //开始直播：推送数据
    public void startLive() {
@@ -51,7 +52,7 @@ class BeiPush {
       if(isSuccess == 1){
          isLiving = true;
          Log.i(TAG,"rtmp链接成功");
-//         audioLive.startLive();
+         audioLive.startLive();
       }else {
          activity.runOnUiThread(new Runnable() {
             @Override
@@ -65,12 +66,12 @@ class BeiPush {
    //停止直播
    public void stopLive(){
       isLiving = false;
-//      audioLive.stopLive();
+      audioLive.stopLive();
       beiPushStop();
    }
 
    public void release(){
-//      audioLive.release();
+      audioLive.release();
       beiPushRelease();
    }
 
@@ -131,10 +132,10 @@ class BeiPush {
       }
    }
 
-//   @Override
-//   public void onAudioFrameCaptured(byte[] bytes) {
-//      native_pushAudio(bytes);
-//   }
+   @Override
+   public void onAudioFrameCaptured(byte[] bytes) {
+      beiPushSendAudio(bytes);
+   }
 public void onDecode(byte[] yuvFrame,String type){
 //   int[] colors = convertByteToColor(yuvFrame);
 //   Bitmap videoBitmap = Bitmap.createBitmap(colors,1440,1080, Bitmap.Config.ARGB_8888);
