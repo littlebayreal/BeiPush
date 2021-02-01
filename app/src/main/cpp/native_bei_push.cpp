@@ -52,12 +52,10 @@ void releasePacketCallBack(AVPacket **packet) {
 
 void callBack(AVPacket *packet, AVFrame *yuvFrame, int index) {
     if (packet) {
-        LOGE("callBack packets.push(packet) %p",&packet);
         //ffmpeg中没有这个操作
 //        packet->m_nTimeStamp = RTMP_GetTime() - start_time;
         packets.push(packet);
     }
-    LOGI("callBack packet pts:%lld", packet->pts);
 //    if(index == 10){
 //        AVFrame *pFrameYUV = av_frame_alloc();
 //        uint8_t *out_buffer = (unsigned char *) av_malloc(
@@ -81,14 +79,16 @@ void callBack(AVPacket *packet, AVFrame *yuvFrame, int index) {
 //        av_frame_free(&yuvFrame);
 //    }
 }
-void audioCallBack(AVPacket* packet){
+
+void audioCallBack(AVPacket *packet) {
     if (packet) {
-        LOGE("callBack packets.push(packet) %p",&packet);
+        LOGE("callBack audio packets.push(packet) %p", &packet);
         //ffmpeg中没有这个操作
 //        packet->m_nTimeStamp = RTMP_GetTime() - start_time;
         packets.push(packet);
     }
 }
+
 void *start(void *args) {
     LOGI("正常链接服务器，可以推流了");
     //正常链接服务器，可以推流了
@@ -114,22 +114,24 @@ void *start(void *args) {
         }
         AVRational srcTimeBase;
         AVRational desTimeBase;
-
+        LOGI("packet stream index %d", packet->stream_index);
         //判断音视频
         if (packet->stream_index == videoPush->video_stream_index) {
-            srcTimeBase = videoPush->vc->time_base;
-            desTimeBase = videoPush->avStream->time_base;
-        }else if (packet->stream_index == audioPush->audio_stream_index){
-            srcTimeBase = videoPush->vc->time_base;
+            LOGI("start thread 视频 pts:%lld", packet->pts);
+            srcTimeBase = videoPush->vc->time_base;//AVCodecContext:时间基 1:framerate （单位：s）
+            desTimeBase = videoPush->avStream->time_base;//AVStream:时间基 1:1000（单位：ms）
+        } else if (packet->stream_index == audioPush->audio_stream_index) {
+            LOGI("start thread 音频 pts:%lld", packet->pts);
+            srcTimeBase = audioPush->vc->time_base;
             desTimeBase = audioPush->avStream->time_base;
-        }else {
+        } else {
             continue;
         }
         packet->pts = av_rescale_q(packet->pts, srcTimeBase, desTimeBase);
-        LOGE("pts:%lld", packet->pts);
-//        packet->dts = av_rescale_q(packet->dts, srcTimeBase, desTimeBase);
-        packet->dts = packet->pts;
-        LOGE("dts:%lld,pts:%lld", packet->dts,packet->pts);
+        LOGE("start thread pts:%lld", packet->pts);
+        packet->dts = av_rescale_q(packet->dts, srcTimeBase, desTimeBase);
+//        packet->dts = packet->pts;
+        LOGE("start thread dts:%lld,pts:%lld", packet->dts, packet->pts);
         packet->duration = av_rescale_q(packet->duration, srcTimeBase, desTimeBase);
         packet->pos = -1;
         //FIX：No PTS (Example: Raw H.264)
@@ -183,6 +185,10 @@ void *start(void *args) {
     if (packet) {
         releasePacketCallBack(&packet);
     }
+    if (ic->pb)
+        avio_close(ic->pb);
+    if (ic)
+        avformat_free_context(ic);
     return 0;
 }
 
@@ -252,16 +258,21 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_beipush_BeiPush_beiPushStop(JNIEnv *env, jobject instance) {
     LOGI("beiPushStop");
-    avio_close(ic->pb);
-    avformat_free_context(ic);
     readyPushing = false;
-    packets.setWork(0);
-    pthread_join(pid_start, 0);
+//    if(readyPushing) {
+//        packets.setWork(0);
+   if (pid_start != 0) {
+       pthread_join(pid_start, 0);
+       pid_start = 0;
+   }
+//    }
 }
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_beipush_BeiPush_beiPushRelease(JNIEnv *env, jobject instance) {
     LOGI("beiPushRelease");
+    javaVm = nullptr;
+    javaCallHelper = nullptr;
     DELETE(videoPush);
     DELETE(audioPush);
 }
@@ -280,9 +291,9 @@ extern "C"
 JNIEXPORT jint JNICALL
 Java_com_example_beipush_BeiPush_getInputSamples(JNIEnv *env, jobject instance) {
 
-//    if(audioLive){
-//        return audioLive->getInputSamples();
-//    }
+    if (audioPush) {
+        return audioPush->getInputSamples();
+    }
     return -1;
 }
 
@@ -291,15 +302,15 @@ JNIEXPORT void JNICALL
 Java_com_example_beipush_BeiPush_beiPushSetAudioEncoderInfo(JNIEnv *env, jobject instance,
                                                             jint sampleRateInHz, jint channels) {
 
-    if(audioPush){
-        audioPush->setAudioEncInfo(sampleRateInHz,channels);
+    if (audioPush) {
+        audioPush->setAudioEncInfo(sampleRateInHz, channels);
     }
 }
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_example_beipush_BeiPush_beiPushSendAudio(JNIEnv *env, jobject instance,
                                                   jbyteArray data_) {
-    if(!videoPush || !readyPushing){
+    if (!videoPush || !readyPushing) {
         return;
     }
     jbyte *data = env->GetByteArrayElements(data_, NULL);

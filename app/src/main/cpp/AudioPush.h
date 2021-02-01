@@ -22,7 +22,7 @@ extern "C"{
 #include "libavutil/time.h"
 }
 class AudioPush : public BasePush{
-    typedef void (*AudioCallBack)(AVPacket * packet);
+    typedef void (*AudioCallBack)(AVPacket* packet);
 public:
     AudioPush(AVFormatContext* _avFormatContext);
     ~AudioPush();
@@ -42,10 +42,10 @@ private:
     AudioCallBack callBack;
     AVCodec *audioCodec = nullptr;
     u_char *outPutBuffer = 0;//编码后的数据存放buffer
-    SwrContext *swrContext;//音频重采样上下文
-    AVFrame * pcmAvFrame;
+    SwrContext *swrContext = nullptr;//音频重采样上下文
+    AVFrame * pcmAvFrame = nullptr;
     AVPacket * aac_pkt = nullptr;
-    int audioIndex;
+    int audioIndex = 0;
     char* url;
 public:
     AVCodecContext *audioCodecContext = nullptr;//编码器

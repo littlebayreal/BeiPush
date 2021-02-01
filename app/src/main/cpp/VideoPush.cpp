@@ -218,10 +218,11 @@ void VideoPush::encodeData(int8_t *data, int src_length, int width, int height,
         pthread_mutex_unlock(&mutex);
         return;
     }
+    enc_pkt->stream_index = video_stream_index;
     //将编译好的数据回传
     if (callBack)
         callBack(enc_pkt, pic_in, index);
-//    av_frame_free(&pic_in);
+    av_frame_free(&pic_in);
     av_free(buffers);
     //会将packet中的值置为空
 //    av_packet_free(&enc_pkt);
@@ -251,6 +252,7 @@ void VideoPush::addStream() {
 
     avStream = vs;
     video_stream_index = vs->index;
+    LOGI("addStream 添加视频流成功:%d",vs->index);
 //    if (x264CodecContext->codec_type == AVMEDIA_TYPE_VIDEO)
 //    {
 //        this->vc = actx;
