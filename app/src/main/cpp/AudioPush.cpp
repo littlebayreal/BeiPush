@@ -54,7 +54,7 @@ void AudioPush::setAudioEncInfo(int samplesInHZ, int channels) {
     audioCodecContext->sample_fmt = outSampleFmt;
     audioCodecContext->sample_rate = samplesInHZ;
     audioCodecContext->channels = channels;
-    audioCodecContext->channel_layout = AV_CH_LAYOUT_STEREO;
+    audioCodecContext->channel_layout = AV_CH_LAYOUT_MONO;//非常重要 单双声道设置错误会导致杂音
     audioCodecContext->channels = av_get_channel_layout_nb_channels(audioCodecContext->channel_layout);
     audioCodecContext->bit_rate = 64000;
 //    audioCodecContext->frame_size = 1024;
@@ -90,7 +90,7 @@ void AudioPush::setAudioEncInfo(int samplesInHZ, int channels) {
         LOGE("av_frame_get_buffer failed!");
         return;
     }
-    LOGE("音频重采样 上下文初始化成功!");
+    LOGI("音频重采样 上下文初始化成功!");
     //设置编码器参数
     //打开音频编码器
     ret = avcodec_open2(audioCodecContext, audioCodec, 0);
@@ -100,8 +100,10 @@ void AudioPush::setAudioEncInfo(int samplesInHZ, int channels) {
         return;
     }
     LOGE("打开faac编码器 success!");
+    vc = audioCodecContext;
 }
 void AudioPush::encodeData(int8_t *data) {
+    LOGI("encodeData audio encode");
     const uint8_t *indata[AV_NUM_DATA_POINTERS] = { 0 };
     indata[0] = (uint8_t *)data;
     int len = swr_convert(swrContext, pcmAvFrame->data, pcmAvFrame->nb_samples, //输出参数，输出存储地址和样本数量
@@ -112,20 +114,27 @@ void AudioPush::encodeData(int8_t *data) {
         LOGE("音频转换失败!");
         return;
     }
+//    LOGI("音频转换成功! %d",audioIndex);
     pcmAvFrame->pts = audioIndex;
+    AVRational av = {1,1000};
     audioIndex += av_rescale_q(pcmAvFrame->nb_samples, { 1,mSampleInHz}, audioCodecContext->time_base);
+    LOGI("音频转换成功! %d",audioIndex);
     int ret = avcodec_send_frame(audioCodecContext, pcmAvFrame);
     if (ret != 0) {
         LOGE("音频编码发送失败!");
         return;
     }
+    aac_pkt = av_packet_alloc();
+    LOGI("音频转换成功!");
     ret = avcodec_receive_packet(audioCodecContext, aac_pkt);
     if (ret != 0) {
         LOGE("音频编码接收失败!");
         return;
     }
+    aac_pkt->stream_index = audio_stream_index;
     if(callBack)
         callBack(aac_pkt);
+//    av_frame_free(&pcmAvFrame);
 }
 //固定一帧可输入的最大样本为1024个
 u_long AudioPush::getInputSamples() {
@@ -144,14 +153,18 @@ void AudioPush::addStream() {
         LOGE("addStream 添加视频流失败");
     }
     vs->codecpar->codec_tag = 0;
-
+//    vs->time_base = vs->codec->time_base;
     //从编码器复制参数
     avcodec_parameters_from_context(vs->codecpar, audioCodecContext);
     av_dump_format(ic, 0, url, 1);
 
     avStream = vs;
+    LOGI("addStream 添加音频流成功:%d",vs->index);
     audio_stream_index = vs->index;
 }
+void AudioPush::setAudioCallBack(AudioCallBack _callBack) {
+    callBack = _callBack;
+};
 void AudioPush::close() {
 
 }
