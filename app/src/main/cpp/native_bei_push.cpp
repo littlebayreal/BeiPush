@@ -53,7 +53,10 @@ void releasePacketCallBack(AVPacket **packet) {
 void callBack(AVPacket *packet, AVFrame *yuvFrame, int index) {
     if (packet) {
         //ffmpeg中没有这个操作
-//        packet->m_nTimeStamp = RTMP_GetTime() - start_time;
+        int delta = av_gettime() - start_time;
+        LOGE("callBack delta %d", delta);
+        packet->pts = av_rescale_q(delta, {1,1000000}, videoPush->avStream->time_base);
+        LOGE("callBack pts %lld", packet->pts);
         packets.push(packet);
     }
 //    if(index == 10){
@@ -84,7 +87,9 @@ void audioCallBack(AVPacket *packet) {
     if (packet) {
         LOGE("callBack audio packets.push(packet) %p", &packet);
         //ffmpeg中没有这个操作
-//        packet->m_nTimeStamp = RTMP_GetTime() - start_time;
+        int delta = av_gettime() - start_time;
+        LOGE("audioCallBack delta %d", delta);
+        packet->pts = av_rescale_q(delta, {1,1000000}, videoPush->avStream->time_base);
         packets.push(packet);
     }
 }
@@ -112,27 +117,27 @@ void *start(void *args) {
             LOGI("packet 已经没有了 继续循环");
             continue;
         }
-        AVRational srcTimeBase;
-        AVRational desTimeBase;
-        LOGI("packet stream index %d", packet->stream_index);
-        //判断音视频
-        if (packet->stream_index == videoPush->video_stream_index) {
-            LOGI("start thread 视频 pts:%lld", packet->pts);
-            srcTimeBase = videoPush->vc->time_base;//AVCodecContext:时间基 1:framerate （单位：s）
-            desTimeBase = videoPush->avStream->time_base;//AVStream:时间基 1:1000（单位：ms）
-        } else if (packet->stream_index == audioPush->audio_stream_index) {
-            LOGI("start thread 音频 pts:%lld", packet->pts);
-            srcTimeBase = audioPush->vc->time_base;
-            desTimeBase = audioPush->avStream->time_base;
-        } else {
-            continue;
-        }
-        packet->pts = av_rescale_q(packet->pts, srcTimeBase, desTimeBase);
-        LOGE("start thread pts:%lld", packet->pts);
-        packet->dts = av_rescale_q(packet->dts, srcTimeBase, desTimeBase);
-//        packet->dts = packet->pts;
+//        AVRational srcTimeBase;
+//        AVRational desTimeBase;
+//        LOGI("packet stream index %d", packet->stream_index);
+//        //判断音视频
+//        if (packet->stream_index == videoPush->video_stream_index) {
+//            LOGI("start thread 视频 pts:%lld", packet->pts);
+//            srcTimeBase = videoPush->vc->time_base;//AVCodecContext:时间基 1:framerate （单位：s）
+//            desTimeBase = videoPush->avStream->time_base;//AVStream:时间基 1:1000（单位：ms）
+//        } else if (packet->stream_index == audioPush->audio_stream_index) {
+//            LOGI("start thread 音频 pts:%lld", packet->pts);
+//            srcTimeBase = audioPush->vc->time_base;
+//            desTimeBase = audioPush->avStream->time_base;
+//        } else {
+//            continue;
+//        }
+//        packet->pts = av_rescale_q(packet->pts, srcTimeBase, desTimeBase);
+//        LOGE("start thread pts:%lld", packet->pts);
+//        packet->dts = av_rescale_q(packet->dts, srcTimeBase, desTimeBase);
+        packet->dts = packet->pts;
         LOGE("start thread dts:%lld,pts:%lld", packet->dts, packet->pts);
-        packet->duration = av_rescale_q(packet->duration, srcTimeBase, desTimeBase);
+//        packet->duration = av_rescale_q(packet->duration, srcTimeBase, desTimeBase);
         packet->pos = -1;
         //FIX：No PTS (Example: Raw H.264)
         //Simple Write PTS
@@ -239,7 +244,7 @@ Java_com_example_beipush_BeiPush_beiPushStart(JNIEnv *env, jobject instance) {
 //    }
 //
 //    cout << inUrl << "添加音频流 success" << endl;
-    ic->max_interleave_delta = 10000;//AVFormatContex *outputContext;
+    ic->max_interleave_delta = 10000;
     ///打开网络IO流通道
     int result = avio_open(&ic->pb, url, AVIO_FLAG_WRITE);
     if (result < 0) {
