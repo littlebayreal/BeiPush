@@ -116,7 +116,6 @@ void AudioPush::encodeData(int8_t *data) {
     }
 //    LOGI("音频转换成功! %d",audioIndex);
     pcmAvFrame->pts = audioIndex;
-    AVRational av = {1,1000};
     audioIndex += av_rescale_q(pcmAvFrame->nb_samples, { 1,mSampleInHz}, audioCodecContext->time_base);
     LOGI("音频转换成功! %d",audioIndex);
     int ret = avcodec_send_frame(audioCodecContext, pcmAvFrame);

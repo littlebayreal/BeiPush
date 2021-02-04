@@ -126,8 +126,9 @@ public class LiveActivity extends AppCompatActivity implements SensorController.
         }
         sensorControler = SensorController.getInstance(this);
         sensorControler.setCameraFocusListener(this);
-        livePusher = new BeiPush(this,1200*1024, 15,"rtmp://192.168.2.218/zxb/mylive");
-
+//        livePusher = new BeiPush(this,1200*1024, 15,"rtmp://192.168.2.218/zxb/mylive");
+        livePusher = new BeiPush(this,1200*1024, 25,
+                "rtmp://sendtc3.douyu.com/live/9561631rB2YpOsSZ?wsSecret=549b837123af85e9bedeeccb7e3e2d79&wsTime=6018eda4&wsSeek=off&wm=0&tw=0&roirecognition=0&record=flv&origin=tct");
         livePusher.setDecodeListener(this);
     }
 

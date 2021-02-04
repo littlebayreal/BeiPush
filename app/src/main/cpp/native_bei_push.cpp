@@ -239,6 +239,7 @@ Java_com_example_beipush_BeiPush_beiPushStart(JNIEnv *env, jobject instance) {
 //    }
 //
 //    cout << inUrl << "添加音频流 success" << endl;
+    ic->max_interleave_delta = 10000;//AVFormatContex *outputContext;
     ///打开网络IO流通道
     int result = avio_open(&ic->pb, url, AVIO_FLAG_WRITE);
     if (result < 0) {
