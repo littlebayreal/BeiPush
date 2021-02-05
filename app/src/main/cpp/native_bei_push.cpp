@@ -31,7 +31,7 @@ char *url = 0;
 pthread_t pid_start;//从packets中取出stmp包发送
 
 int readyPushing = 0;
-uint32_t start_time;
+int64_t start_time;
 
 JavaVM *javaVm = nullptr;
 JavaCallHelper *javaCallHelper = 0;
@@ -55,7 +55,7 @@ void callBack(AVPacket *packet, AVFrame *yuvFrame, int index) {
         //ffmpeg中没有这个操作
         int delta = av_gettime() - start_time;
         LOGE("callBack delta %d", delta);
-        packet->pts = av_rescale_q(delta, {1,1000000}, videoPush->avStream->time_base);
+        packet->pts = av_rescale_q(delta, AV_TIME_BASE_Q, videoPush->avStream->time_base);
         LOGE("callBack pts %lld", packet->pts);
         packets.push(packet);
     }
@@ -86,10 +86,13 @@ void callBack(AVPacket *packet, AVFrame *yuvFrame, int index) {
 void audioCallBack(AVPacket *packet) {
     if (packet) {
         LOGE("callBack audio packets.push(packet) %p", &packet);
+        int64_t now_time = av_gettime();
         //ffmpeg中没有这个操作
-        int delta = av_gettime() - start_time;
-        LOGE("audioCallBack delta %d", delta);
-        packet->pts = av_rescale_q(delta, {1,1000000}, videoPush->avStream->time_base);
+        int delta = now_time - start_time;
+        int64_t delta_64 = now_time - start_time;
+        LOGE("audioCallBack delta:%d delta_64:%lld now_time:%lld start:%lld",delta, delta_64,now_time,start_time);
+        packet->pts = av_rescale_q(delta, AV_TIME_BASE_Q, audioPush->avStream->time_base);
+        LOGE("audioCallBack audio packets pts %lld", packet->pts);
         packets.push(packet);
     }
 }

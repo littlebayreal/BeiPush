@@ -39,7 +39,7 @@ public class TextureViewPreview extends PreviewImpl {
         final View view = View.inflate(context, R.layout.texture_view, parent);
         mTextureView = view.findViewById(R.id.texture_view);
         mTextureView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
-
+            //surfacetexture创建的时候
             @Override
             public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
                 setSize(width, height);
