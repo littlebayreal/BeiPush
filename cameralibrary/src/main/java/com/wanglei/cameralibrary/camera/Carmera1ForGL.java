@@ -1,7 +1,10 @@
 package com.wanglei.cameralibrary.camera;
 
 import android.graphics.ImageFormat;
+import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
+import android.view.SurfaceHolder;
+import android.view.View;
 
 import androidx.collection.SparseArrayCompat;
 
@@ -14,6 +17,7 @@ import com.wanglei.cameralibrary.base.SizeMap;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -57,21 +61,31 @@ public class Carmera1ForGL {
 
     private int mDisplayOrientation;
 
-    public Carmera1ForGL(Callback callback, GLSurfaceTexturePreview glSurfaceTexturePreview) throws IOException {
+    public Carmera1ForGL(Callback callback, GLSurfaceTexturePreview glSurfaceTexturePreview){
         this.mCallback = callback;
         this.mGLSurfaceTexturePreview = glSurfaceTexturePreview;
-        adjustCameraParameters();
-        if (mCamera != null)
-            mCamera.setPreviewTexture(glSurfaceTexturePreview.getSurfaceTexture());
+        glSurfaceTexturePreview.setCallback(new GLSurfaceTexturePreview.Callback() {
+            @Override
+            public void onSurfaceCreated() {
+
+            }
+
+            @Override
+            public void onSurfaceChanged() {
+                setUpPreview();
+                adjustCameraParameters();
+            }
+
+            @Override
+            public void onDrawFrame() {
+
+            }
+        });
     }
-    public boolean start() {
+    public boolean start(){
         chooseCamera();
         openCamera();
-//        if (mPreview.isReady()) {
-//            setUpPreview();
-//        }
-        if (mCamera != null)
-            mCamera.setPreviewTexture(glSurfaceTexturePreview.getSurfaceTexture());
+        setUpPreview();
         adjustCameraParameters();
         mShowingPreview = true;
         mCamera.startPreview();
@@ -116,6 +130,13 @@ public class Carmera1ForGL {
         mCamera.setDisplayOrientation(calcDisplayOrientation(mDisplayOrientation));
         mCallback.onCameraOpened();
     }
+    void setUpPreview() {
+        try {
+            mCamera.setPreviewTexture(mGLSurfaceTexturePreview.getSurfaceTexture());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
     private byte[] buffer;
     void adjustCameraParameters() {
         SortedSet<Size> sizes = mPreviewSizes.sizes(mAspectRatio);
@@ -145,7 +166,7 @@ public class Carmera1ForGL {
         buffer = new byte[size.getWidth() * size.getWidth() * 3 / 2];
         //数据缓存区
         mCamera.addCallbackBuffer(buffer);
-        mCamera.setPreviewCallbackWithBuffer(this);
+//        mCamera.setPreviewCallbackWithBuffer(this);
         mCameraParameters.setPictureSize(pictureSize.getWidth(), pictureSize.getHeight());
         mCameraParameters.setRotation(calcCameraRotation(mDisplayOrientation));
         setAutoFocusInternal(mAutoFocus);
@@ -156,14 +177,15 @@ public class Carmera1ForGL {
         }
     }
     @SuppressWarnings("SuspiciousNameCombination")
+    //选择最理想的尺寸
     private Size chooseOptimalSize(SortedSet<Size> sizes) {
-        if (!mPreview.isReady()) { // Not yet laid out
+        if (!isReady()) { // Not yet laid out
             return sizes.first(); // Return the smallest size
         }
         int desiredWidth;
         int desiredHeight;
-        final int surfaceWidth = mPreview.getWidth();
-        final int surfaceHeight = mPreview.getHeight();
+        final int surfaceWidth = mGLSurfaceTexturePreview.getSurfaceWidth();
+        final int surfaceHeight = mGLSurfaceTexturePreview.getSurfaceHeight();
         if (isLandscape(mDisplayOrientation)) {
             desiredWidth = surfaceHeight;
             desiredHeight = surfaceWidth;
@@ -261,8 +283,162 @@ public class Carmera1ForGL {
             return false;
         }
     }
+    /**
+     * Calculate camera rotation
+     *
+     * This calculation is applied to the output JPEG either via Exif Orientation tag
+     * or by actually transforming the bitmap. (Determined by vendor camera API implementation)
+     *
+     * Note: This is not the same calculation as the display orientation
+     *
+     * @param screenOrientationDegrees Screen orientation in degrees
+     * @return Number of degrees to rotate image in order for it to view correctly.
+     */
+    private int calcCameraRotation(int screenOrientationDegrees) {
+        if (mCameraInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
+            return (mCameraInfo.orientation + screenOrientationDegrees) % 360;
+        } else {  // back-facing
+            final int landscapeFlip = isLandscape(screenOrientationDegrees) ? 180 : 0;
+            return (mCameraInfo.orientation + screenOrientationDegrees + landscapeFlip) % 360;
+        }
+    }
+    public void setDisplayOrientation(int displayOrientation) {
+        if (mDisplayOrientation == displayOrientation) {
+            return;
+        }
+        mDisplayOrientation = displayOrientation;
+        if (isCameraOpened()) {
+            mCameraParameters.setRotation(calcCameraRotation(displayOrientation));
+            mCamera.setParameters(mCameraParameters);
+            mCamera.setDisplayOrientation(calcDisplayOrientation(displayOrientation));
+        }
+    }    public void setFacing(int facing) {
+        if (mFacing == facing) {
+            return;
+        }
+        mFacing = facing;
+        if (isCameraOpened()) {
+            stop();
+            start();
+        }
+    }
+    public int getFacing() {
+        return mFacing;
+    }
+
+    public Set<AspectRatio> getSupportedAspectRatios() {
+        SizeMap idealAspectRatios = mPreviewSizes;
+        for (AspectRatio aspectRatio : idealAspectRatios.ratios()) {
+            if (mPictureSizes.sizes(aspectRatio) == null) {
+                idealAspectRatios.remove(aspectRatio);
+            }
+        }
+        return idealAspectRatios.ratios();
+    }
+
+    public boolean setAspectRatio(AspectRatio ratio) {
+        if (mAspectRatio == null || !isCameraOpened()) {
+            // Handle this later when camera is opened
+            mAspectRatio = ratio;
+            return true;
+        } else if (!mAspectRatio.equals(ratio)) {
+            final Set<Size> sizes = mPreviewSizes.sizes(ratio);
+            if (sizes == null) {
+                throw new UnsupportedOperationException(ratio + " is not supported");
+            } else {
+                mAspectRatio = ratio;
+                adjustCameraParameters();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public AspectRatio getAspectRatio() {
+        return mAspectRatio;
+    }
+
+    public void setAutoFocus(boolean autoFocus) {
+        if (mAutoFocus == autoFocus) {
+            return;
+        }
+        if (setAutoFocusInternal(autoFocus)) {
+            mCamera.setParameters(mCameraParameters);
+        }
+    }
+    public boolean getAutoFocus() {
+        if (!isCameraOpened()) {
+            return mAutoFocus;
+        }
+        String focusMode = mCameraParameters.getFocusMode();
+        return focusMode != null && focusMode.contains("continuous");
+    }
+    private AspectRatio choosePreviewAspectRatio() {
+        AspectRatio r = null;
+        for (AspectRatio ratio : mPreviewSizes.ratios()) {
+            r = ratio;
+            if (ratio.equals(Constants.DEFAULT_ASPECT_RATIO)) {
+                return ratio;
+            }
+        }
+        return r;
+    }
+    private AspectRatio choosePicAspectRatio() {
+        AspectRatio r = null;
+        for (AspectRatio ratio : mPictureSizes.ratios()) {
+            r = ratio;
+            if (ratio.equals(Constants.DEFAULT_ASPECT_RATIO)) {
+                return ratio;
+            }
+        }
+        return r;
+    }
     public boolean isCameraOpened() {
         return mCamera != null;
+    }
+    public boolean isReady() {
+        return mGLSurfaceTexturePreview != null;
+    }
+    public View getView() {
+        return mGLSurfaceTexturePreview.getView();
+    }
+    public void stop() {
+        if (mCamera != null) {
+            mCamera.stopPreview();
+        }
+        mShowingPreview = false;
+        isFocusing = false;
+        releaseCamera();
+    }
+    private boolean isFocusing = false;
+    public void autoFocus() {
+        try {
+            if (mCamera != null && !isFocusing && mShowingPreview) { //camera不为空，并且isFocusing=false的时候才去对焦
+                mCamera.cancelAutoFocus();
+                isFocusing = true;
+                mCamera.autoFocus(new Camera.AutoFocusCallback() {
+                    @Override
+                    public void onAutoFocus(boolean success, Camera camera) {
+                        isFocusing = false;
+                    }
+                });
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void setFlash(int flash) {
+        if (flash == mFlash) {
+            return;
+        }
+        if (setFlashInternal(flash)) {
+            mCamera.setParameters(mCameraParameters);
+        }
+    }
+
+    public int getFlash() {
+        return mFlash;
     }
     public interface Callback {
 

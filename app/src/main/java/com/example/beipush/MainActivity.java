@@ -48,6 +48,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 Intent intent = new Intent(MainActivity.this,LiveActivity.class);
                 startActivity(intent);
                 break;
+            case "BeiPusher+OpenGLEs渲染":
+                intent = new Intent(MainActivity.this,OpenGLRenderActivity.class);
+                startActivity(intent);
+                break;
         }
     }
     private void requestPermission() {
