@@ -67,6 +67,7 @@ public class GPUImageFilter {
     }
 
     public GPUImageFilter(MagicFilterType type) {
+        //设置顶点着色器和片元着色器
         this(type, R.raw.vertex, R.raw.fragment);
     }
 
@@ -119,14 +120,16 @@ public class GPUImageFilter {
     }
 
     private void loadSamplerShader() {
+        //创建glprogram 渲染小程序
         mGLProgId = OpenGLUtils.loadProgram(OpenGLUtils.readShaderFromRawResource(getContext(), mVertexShaderId),
             OpenGLUtils.readShaderFromRawResource(getContext(), mFragmentShaderId));
+        //从glprogram中找到各个变量
         mGLPositionIndex = GLES20.glGetAttribLocation(mGLProgId, "position");
         mGLTextureCoordinateIndex = GLES20.glGetAttribLocation(mGLProgId,"inputTextureCoordinate");
         mGLTextureTransformIndex = GLES20.glGetUniformLocation(mGLProgId, "textureTransform");
         mGLInputImageTextureIndex = GLES20.glGetUniformLocation(mGLProgId, "inputImageTexture");
     }
-
+    //初始化顶点矩阵
     private void initVbo() {
         final float VEX_CUBE[] = {
             -1.0f, -1.0f, // Bottom left.
@@ -134,7 +137,7 @@ public class GPUImageFilter {
             -1.0f, 1.0f, // Top left.
             1.0f, 1.0f, // Top right.
         };
-
+        //初始化片元矩阵
         final float TEX_COORD[] = {
             0.0f, 0.0f, // Bottom left.
             1.0f, 0.0f, // Bottom right.
@@ -152,9 +155,11 @@ public class GPUImageFilter {
 
         mGLCubeId = new int[1];
         mGLTextureCoordinateId = new int[1];
-
+        //初始化vbo
         GLES20.glGenBuffers(1, mGLCubeId, 0);
+        //用创建好的属性数据填充VBO缓冲区
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mGLCubeId[0]);
+        //glBufferData- 创建并初始化缓冲区对象的数据存储  float占4个字节
         GLES20.glBufferData(GLES20.GL_ARRAY_BUFFER, mGLCubeBuffer.capacity() * 4, mGLCubeBuffer, GLES20.GL_STATIC_DRAW);
 
         GLES20.glGenBuffers(1, mGLTextureCoordinateId, 0);
@@ -250,24 +255,32 @@ public class GPUImageFilter {
 
         GLES20.glUseProgram(mGLProgId);
         runPendingOnDrawTasks();
-
+        // 当你想配置某一块内存或者你想绘制这一块内存的内容时，
+        // 你需要调用GLBindbuffer函数，并且该函数第二个参数要设置成你想操作内存的标识，
+        // 然后接下来的操作都是针对这一块内存进行的，操作完过后记得再次调用GLBindBuffer(GL_ARRAY_BUFFER,0),
+        // 将当前活动内存设置为空，非必需，但是这样做会是个好习惯.
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mGLCubeId[0]);
+        //启用顶点索引
         GLES20.glEnableVertexAttribArray(mGLPositionIndex);
+        //步长为一组顶点2 * float所占字节4
         GLES20.glVertexAttribPointer(mGLPositionIndex, 2, GLES20.GL_FLOAT, false, 4 * 2, 0);
 
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, mGLTextureCoordinateId[0]);
+        //启用片元索引
         GLES20.glEnableVertexAttribArray(mGLTextureCoordinateIndex);
         GLES20.glVertexAttribPointer(mGLTextureCoordinateIndex, 2, GLES20.GL_FLOAT, false, 4 * 2, 0);
 
         GLES20.glUniformMatrix4fv(mGLTextureTransformIndex, 1, false, mGLTextureTransformMatrix, 0);
 
+        //激活用来显示图片的窗口/画框
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
+//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,cameraTextureId);
         GLES20.glUniform1i(mGLInputImageTextureIndex, 0);
 
         onDrawArraysPre();
 
-        GLES20.glViewport(0, 0, mInputWidth, mInputHeight);
+        GLES20.glViewport(0, 0, mInputWidth,mInputHeight);
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, mGLFboId[0]);
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
         GLES20.glReadPixels(0, 0, mInputWidth, mInputHeight, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mGLFboBuffer);
@@ -277,7 +290,6 @@ public class GPUImageFilter {
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
 
         onDrawArraysAfter();
-
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0);
 
         GLES20.glDisableVertexAttribArray(mGLPositionIndex);
