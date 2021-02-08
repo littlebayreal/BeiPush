@@ -3,6 +3,7 @@ package com.wanglei.cameralibrary.camera;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
+import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.View;
 
@@ -21,7 +22,8 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class Carmera1ForGL {
+public class Camera1ForGL {
+    private static final String TAG = "Camera1ForGL";
     private static final int INVALID_CAMERA_ID = -1;
 
     private static final SparseArrayCompat<String> FLASH_MODES = new SparseArrayCompat<>();
@@ -61,7 +63,7 @@ public class Carmera1ForGL {
 
     private int mDisplayOrientation;
 
-    public Carmera1ForGL(Callback callback, GLSurfaceTexturePreview glSurfaceTexturePreview){
+    public Camera1ForGL(Callback callback, GLSurfaceTexturePreview glSurfaceTexturePreview){
         this.mCallback = callback;
         this.mGLSurfaceTexturePreview = glSurfaceTexturePreview;
         glSurfaceTexturePreview.setCallback(new GLSurfaceTexturePreview.Callback() {
@@ -83,6 +85,7 @@ public class Carmera1ForGL {
         });
     }
     public boolean start(){
+        Log.i(TAG,"start preview");
         chooseCamera();
         openCamera();
         setUpPreview();
@@ -132,6 +135,7 @@ public class Carmera1ForGL {
     }
     void setUpPreview() {
         try {
+            Log.i(TAG,"setUpPreview:"+ mGLSurfaceTexturePreview.getSurfaceTexture());
             mCamera.setPreviewTexture(mGLSurfaceTexturePreview.getSurfaceTexture());
         } catch (IOException e) {
             throw new RuntimeException(e);

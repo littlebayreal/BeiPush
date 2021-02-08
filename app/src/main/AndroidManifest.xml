@@ -21,6 +21,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".LiveActivity"/>
+        <activity android:name=".OpenGLRenderActivity"/>
     </application>
 
 </manifest>

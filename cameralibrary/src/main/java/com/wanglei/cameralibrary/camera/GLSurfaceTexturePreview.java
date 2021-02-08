@@ -6,8 +6,13 @@ import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.view.SurfaceHolder;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.ViewParent;
 
+import com.wanglei.cameralibrary.R;
 import com.wanglei.cameralibrary.gpuimage.GPUImageFilter;
 import com.wanglei.cameralibrary.gpuimage.utils.MagicFilterType;
 
@@ -16,7 +21,10 @@ import javax.microedition.khronos.opengles.GL10;
 
 import static android.opengl.GLES11Ext.GL_TEXTURE_EXTERNAL_OES;
 
-public class GLSurfaceTexturePreview extends GLSurfaceView implements GLSurfaceView.Renderer {
+public class GLSurfaceTexturePreview implements GLSurfaceView.Renderer {
+    private static final String TAG = "GLSurfaceTexturePreview";
+    private GLSurfaceView mGLSurfaceView;
+    private Context mContext;
     //用来接收摄像头的数据 通过它传输给surfaceview
     private GPUImageFilter magicFilter;
     private SurfaceTexture surfaceTexture;
@@ -28,23 +36,25 @@ public class GLSurfaceTexturePreview extends GLSurfaceView implements GLSurfaceV
     private float[] mSurfaceMatrix = new float[16];
     private float[] mTransformMatrix = new float[16];
 //    private int mOESTextureId = OpenGLUtils.NO_TEXTURE;
-    public GLSurfaceTexturePreview(Context context) {
-        super(context);
-    }
+    public GLSurfaceTexturePreview(Context context, ViewGroup viewParent) {
+        mContext = context;
+        final View view = View.inflate(context, R.layout.gl_surface_view, viewParent);
+        mGLSurfaceView = view.findViewById(R.id.surface_view);
+        final SurfaceHolder holder = mGLSurfaceView.getHolder();
 
-    public GLSurfaceTexturePreview(Context context, AttributeSet attrs) {
-        super(context, attrs);
-        setEGLContextClientVersion(2);//设置opgles版本
-        setRenderer(this);//设置渲染回调方法
-        setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);//设置为手动模式
-
+        //noinspection deprecation
+        holder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+        mGLSurfaceView.setEGLContextClientVersion(2);//设置opgles版本
+        mGLSurfaceView.setRenderer(this);//设置渲染回调方法
+        mGLSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);//设置为手动模式
+        Log.i(TAG,"GLSurfaceTexturePreview");
     }
 
     @Override
     public void onSurfaceCreated(GL10 gl10, EGLConfig eglConfig) {
-//        surfaceTexture = new SurfaceTexture();
+        Log.i(TAG,"onSurfaceCreated");
         magicFilter = new GPUImageFilter(MagicFilterType.NONE);
-        magicFilter.init(getContext().getApplicationContext());
+        magicFilter.init(mContext.getApplicationContext());
 
 
         int[] textures = new int[1];
@@ -55,26 +65,30 @@ public class GLSurfaceTexturePreview extends GLSurfaceView implements GLSurfaceV
         surfaceTexture.setOnFrameAvailableListener(new SurfaceTexture.OnFrameAvailableListener() {
             @Override
             public void onFrameAvailable(SurfaceTexture surfaceTexture) {
-                requestRender();
+                Log.i(TAG,"onFrameAvailable:图像纹理更新");
+                mGLSurfaceView.requestRender();
             }
         });
     }
-
+    private float mOutputAspectRatio;
+    private float mInputAspectRatio;
     @Override
     public void onSurfaceChanged(GL10 gl10, int i, int i1) {
+        Log.i(TAG,"onSurfaceChanged");
         GLES20.glViewport(0,0,i,i1);
         //设置surfaceview的宽高
         setSize(i,i1);
         magicFilter.onDisplaySizeChanged(i, i1);
         magicFilter.onInputSizeChanged(i, i1);
 
-//        mOutputAspectRatio = width > height ? (float) width / height : (float) height / width;
-//        float aspectRatio = mOutputAspectRatio / mInputAspectRatio;
-//        if (width > height) {
-//            Matrix.orthoM(mProjectionMatrix, 0, -1.0f, 1.0f, -aspectRatio, aspectRatio, -1.0f, 1.0f);
-//        } else {
-//            Matrix.orthoM(mProjectionMatrix, 0, -aspectRatio, aspectRatio, -1.0f, 1.0f, -1.0f, 1.0f);
-//        }
+        mOutputAspectRatio = i > i1 ? (float) i / i1 : (float) i1 / i;
+        float aspectRatio = mOutputAspectRatio / mInputAspectRatio;
+        if (i > i1) {
+            Matrix.orthoM(mProjectionMatrix, 0, -1.0f, 1.0f, -aspectRatio, aspectRatio, -1.0f, 1.0f);
+        } else {
+            Matrix.orthoM(mProjectionMatrix, 0, -aspectRatio, aspectRatio, -1.0f, 1.0f, -1.0f, 1.0f);
+        }
+        if (mCallback != null)
         mCallback.onSurfaceChanged();
     }
 
@@ -86,9 +100,9 @@ public class GLSurfaceTexturePreview extends GLSurfaceView implements GLSurfaceV
 
         surfaceTexture.updateTexImage();
 
-//        surfaceTexture.getTransformMatrix(mSurfaceMatrix);
-//        Matrix.multiplyMM(mTransformMatrix, 0, mSurfaceMatrix, 0, mProjectionMatrix, 0);
-//        magicFilter.setTextureTransformMatrix(mTransformMatrix);
+        surfaceTexture.getTransformMatrix(mSurfaceMatrix);
+        Matrix.multiplyMM(mTransformMatrix, 0, mSurfaceMatrix, 0, mProjectionMatrix, 0);
+        magicFilter.setTextureTransformMatrix(mTransformMatrix);
         magicFilter.onDrawFrame(mOESTextureId);
     }
     public SurfaceTexture getSurfaceTexture(){
@@ -97,6 +111,9 @@ public class GLSurfaceTexturePreview extends GLSurfaceView implements GLSurfaceV
     public void setSize(int width, int height) {
         mWidth = width;
         mHeight = height;
+
+        mInputAspectRatio = width > height ?
+                (float) width / height : (float) width / height;
     }
 
     public int getSurfaceWidth() {
@@ -110,7 +127,7 @@ public class GLSurfaceTexturePreview extends GLSurfaceView implements GLSurfaceV
         mCallback = callback;
     }
     public View getView(){
-        return this;
+        return mGLSurfaceView;
     }
     public interface Callback {
         void onSurfaceCreated();

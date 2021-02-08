@@ -2,8 +2,9 @@ package com.wanglei.cameralibrary;
 
 import android.content.Context;
 import android.content.res.TypedArray;
-import android.os.Build;
+import android.os.Parcelable;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.widget.FrameLayout;
 
 import androidx.annotation.IntDef;
@@ -11,14 +12,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.wanglei.cameralibrary.base.AspectRatio;
-import com.wanglei.cameralibrary.base.CameraViewImpl;
 import com.wanglei.cameralibrary.base.Constants;
-import com.wanglei.cameralibrary.base.PreviewImpl;
-import com.wanglei.cameralibrary.camera.Camera1;
-import com.wanglei.cameralibrary.camera.Carmera1ForGL;
+import com.wanglei.cameralibrary.camera.Camera1ForGL;
 import com.wanglei.cameralibrary.camera.GLSurfaceTexturePreview;
-import com.wanglei.cameralibrary.camera.SurfaceViewPreview;
-import com.wanglei.cameralibrary.camera.TextureViewPreview;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
@@ -28,7 +24,8 @@ import java.util.Set;
 /**
  * 适配opengles
  */
-class CameraGLView extends FrameLayout {
+public class CameraGLView extends FrameLayout {
+    private static final String TAG = "CameraGLView";
     /**
      * The camera device faces the opposite direction as the device's screen.
      */
@@ -79,7 +76,7 @@ class CameraGLView extends FrameLayout {
     public @interface Flash {
     }
 
-    Carmera1ForGL mImpl;
+    Camera1ForGL mImpl;
     private final CallbackBridge mCallbacks;
 
     private boolean mAdjustViewBounds;
@@ -106,7 +103,7 @@ class CameraGLView extends FrameLayout {
         // Internal setup
         preview = createPreviewImpl(context);
         mCallbacks = new CallbackBridge();
-        mImpl = new Carmera1ForGL(mCallbacks, preview);
+        mImpl = new Camera1ForGL(mCallbacks, preview);
 
         // Attributes根据布局设置默认参数
         TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.CameraView,
@@ -192,11 +189,19 @@ class CameraGLView extends FrameLayout {
                             MeasureSpec.EXACTLY),
                     MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
         }
+        Log.i(TAG,"setFixedSize width:"+ width + "height:" + height);
+//        ((GLSurfaceTexturePreview)mImpl.getView()).getHolder().setFixedSize(width,height);
     }
+
+    @Override
+    protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+        super.onLayout(changed, left, top, right, bottom);
+    }
+
     @NonNull
     private GLSurfaceTexturePreview createPreviewImpl(Context context) {
         GLSurfaceTexturePreview preview;
-        preview = new GLSurfaceTexturePreview(context);
+        preview = new GLSurfaceTexturePreview(context,this);
         return preview;
     }
     /**
@@ -297,20 +302,41 @@ class CameraGLView extends FrameLayout {
         //noinspection WrongConstant
         return mImpl.getFlash();
     }
-    private class CallbackBridge implements Carmera1ForGL.Callback {
+    /**
+     * Open a camera device and start showing camera preview. This is typically called from
+     * .
+     */
+    public void start() {
+        if (!mImpl.start()) {//很多设备不支持Camera2，这里会检测能否正常start，不能启动则改为使用Camera1
+            //store the state ,and restore this state after fall back o Camera1
+            Parcelable state = onSaveInstanceState();
+            // Camera2 uses legacy hardware layer; fall back to Camera1
+            mImpl = new Camera1ForGL(mCallbacks, createPreviewImpl(getContext()));
+            onRestoreInstanceState(state);
+            mImpl.start();
+        }
+    }
+    /**
+     * Stop camera preview and close the device. This is typically called from
+     * .
+     */
+    public void stop() {
+        mImpl.stop();
+    }
+    private class CallbackBridge implements Camera1ForGL.Callback {
 
-        private final ArrayList<CameraView.Callback> mCallbacks = new ArrayList<>();
+        private final ArrayList<Camera1ForGL.Callback> mCallbacks = new ArrayList<>();
 
         private boolean mRequestLayoutOnOpen;
 
         CallbackBridge() {
         }
 
-        public void add(CameraView.Callback callback) {
+        public void add(Camera1ForGL.Callback callback) {
             mCallbacks.add(callback);
         }
 
-        public void remove(CameraView.Callback callback) {
+        public void remove(Camera1ForGL.Callback callback) {
             mCallbacks.remove(callback);
         }
 
@@ -320,21 +346,21 @@ class CameraGLView extends FrameLayout {
                 mRequestLayoutOnOpen = false;
                 requestLayout();
             }
-            for (CameraView.Callback callback : mCallbacks) {
+            for (Camera1ForGL.Callback callback : mCallbacks) {
 //                callback.onCameraOpened(CameraView.this);
             }
         }
 
         @Override
         public void onCameraClosed() {
-            for (CameraView.Callback callback : mCallbacks) {
+            for (Camera1ForGL.Callback callback : mCallbacks) {
 //                callback.onCameraClosed(CameraView.this);
             }
         }
 
         @Override
         public void onPreviewSizeConfirm(int width, int height) {
-            for (CameraView.Callback callback : mCallbacks) {
+            for (Camera1ForGL.Callback callback : mCallbacks) {
                 callback.onPreviewSizeConfirm(width, height);
             }
         }

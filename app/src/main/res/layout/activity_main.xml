@@ -24,6 +24,7 @@
        android:onClick="onClick"
        app:layout_constraintTop_toBottomOf="@id/tv"/>
     <Button
+        android:id="@+id/btn2"
         android:layout_width="match_parent"
         android:layout_height="50dp"
         app:layout_constraintLeft_toLeftOf="parent"
@@ -31,4 +32,13 @@
         android:text="BeiPusher基于(FFmpeg封装音视频推流)"
         android:onClick="onClick"
         app:layout_constraintTop_toBottomOf="@id/btn1"/>
+
+    <Button
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        android:text="BeiPusher+OpenGLEs渲染"
+        android:onClick="onClick"
+        app:layout_constraintTop_toBottomOf="@id/btn2"/>
 </androidx.constraintlayout.widget.ConstraintLayout>
