@@ -68,7 +68,7 @@ public class GPUImageFilter {
 
     public GPUImageFilter(MagicFilterType type) {
         //设置顶点着色器和片元着色器
-        this(type, R.raw.vertex, R.raw.fragment);
+        this(type, R.raw.vertex, R.raw.splite_screen);
     }
 
     public GPUImageFilter(MagicFilterType type, int fragmentShaderId) {
@@ -122,23 +122,28 @@ public class GPUImageFilter {
     private void loadSamplerShader() {
         //创建glprogram 渲染小程序
         mGLProgId = OpenGLUtils.loadProgram(OpenGLUtils.readShaderFromRawResource(getContext(), mVertexShaderId),
-            OpenGLUtils.readShaderFromRawResource(getContext(), mFragmentShaderId));
+                OpenGLUtils.readShaderFromRawResource(getContext(), mFragmentShaderId));
         //从glprogram中找到各个变量
         mGLPositionIndex = GLES20.glGetAttribLocation(mGLProgId, "position");
-        mGLTextureCoordinateIndex = GLES20.glGetAttribLocation(mGLProgId,"inputTextureCoordinate");
+        mGLTextureCoordinateIndex = GLES20.glGetAttribLocation(mGLProgId, "inputTextureCoordinate");
         mGLTextureTransformIndex = GLES20.glGetUniformLocation(mGLProgId, "textureTransform");
         mGLInputImageTextureIndex = GLES20.glGetUniformLocation(mGLProgId, "inputImageTexture");
     }
+
     //初始化顶点矩阵
     private void initVbo() {
         final float VEX_CUBE[] = {
-            -1.0f, -1.0f, // Bottom left.
-            1.0f, -1.0f, // Bottom right.
-            -1.0f, 1.0f, // Top left.
-            1.0f, 1.0f, // Top right.
+                -1.0f, -1.0f, // Bottom left.
+                1.0f, -1.0f, // Bottom right.
+                -1.0f, 1.0f, // Top left.
+                1.0f, 1.0f, // Top right.
         };
         //初始化片元矩阵
         final float TEX_COORD[] = {
+//                0.0f, 1.0f, // Bottom left.
+//                0.0f, 0.0f, // Bottom right.
+//                1.0f, 1.0f, // Top left.
+//                1.0f, 0.0f // Top right.
             0.0f, 0.0f, // Bottom left.
             1.0f, 0.0f, // Bottom right.
             0.0f, 1.0f, // Top left.
@@ -146,11 +151,11 @@ public class GPUImageFilter {
         };
 
         mGLCubeBuffer = ByteBuffer.allocateDirect(VEX_CUBE.length * 4)
-            .order(ByteOrder.nativeOrder()).asFloatBuffer();
+                .order(ByteOrder.nativeOrder()).asFloatBuffer();
         mGLCubeBuffer.put(VEX_CUBE).position(0);
 
         mGLTextureBuffer = ByteBuffer.allocateDirect(TEX_COORD.length * 4)
-            .order(ByteOrder.nativeOrder()).asFloatBuffer();
+                .order(ByteOrder.nativeOrder()).asFloatBuffer();
         mGLTextureBuffer.put(TEX_COORD).position(0);
 
         mGLCubeId = new int[1];
@@ -197,6 +202,7 @@ public class GPUImageFilter {
         GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, mGLFboId[0]);
         GLES20.glFramebufferTexture2D(GLES20.GL_FRAMEBUFFER, GLES20.GL_COLOR_ATTACHMENT0, GLES20.GL_TEXTURE_2D, mGLFboTexId[0], 0);
+        //解绑 非必需操作
         GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, 0);
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
     }
@@ -269,10 +275,9 @@ public class GPUImageFilter {
         //启用片元索引
         GLES20.glEnableVertexAttribArray(mGLTextureCoordinateIndex);
         GLES20.glVertexAttribPointer(mGLTextureCoordinateIndex, 2, GLES20.GL_FLOAT, false, 4 * 2, 0);
-
         GLES20.glUniformMatrix4fv(mGLTextureTransformIndex, 1, false, mGLTextureTransformMatrix, 0);
 
-        //激活用来显示图片的窗口/画框
+        //激活用来显示图片的窗口/画框  采样器的纹理单元要一致 texture0 对应 0
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
 //        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,cameraTextureId);
@@ -280,8 +285,14 @@ public class GPUImageFilter {
 
         onDrawArraysPre();
 
-        GLES20.glViewport(0, 0, mInputWidth,mInputHeight);
+        GLES20.glViewport(0, 0, mInputWidth, mInputHeight);
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, mGLFboId[0]);
+        //参数1：有三种取值
+        //1.GL_TRIANGLES：每三个顶之间绘制三角形，之间不连接
+        //2.GL_TRIANGLE_FAN：以V0V1V2,V0V2V3,V0V3V4，……的形式绘制三角形
+        //3.GL_TRIANGLE_STRIP：顺序在每三个顶点之间均绘制三角形。这个方法可以保证从相同的方向上
+        //参数2：从数组缓存中的哪一位开始绘制，一般都定义为0
+        //参数3：顶点的数量
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
         GLES20.glReadPixels(0, 0, mInputWidth, mInputHeight, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mGLFboBuffer);
         GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
@@ -290,26 +301,27 @@ public class GPUImageFilter {
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
 
         onDrawArraysAfter();
+        //将变量置空或关闭
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0);
-
         GLES20.glDisableVertexAttribArray(mGLPositionIndex);
         GLES20.glDisableVertexAttribArray(mGLTextureCoordinateIndex);
-
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
 
         return mGLFboTexId[0];
     }
 
-    protected void onDrawArraysPre() {}
+    protected void onDrawArraysPre() {
+    }
 
-    protected void onDrawArraysAfter() {}
-    
+    protected void onDrawArraysAfter() {
+    }
+
     private void runPendingOnDrawTasks() {
         while (!mRunOnDraw.isEmpty()) {
             mRunOnDraw.removeFirst().run();
         }
     }
-    
+
     public int getProgram() {
         return mGLProgId;
     }
@@ -325,8 +337,8 @@ public class GPUImageFilter {
     protected MagicFilterType getFilterType() {
         return mType;
     }
-    
-    public void setTextureTransformMatrix(float[] mtx){
+
+    public void setTextureTransformMatrix(float[] mtx) {
         mGLTextureTransformMatrix = mtx;
     }
 
