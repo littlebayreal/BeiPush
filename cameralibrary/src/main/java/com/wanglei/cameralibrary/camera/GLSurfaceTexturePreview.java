@@ -32,10 +32,31 @@ public class GLSurfaceTexturePreview implements GLSurfaceView.Renderer {
     private int mWidth;
     private int mHeight;
     private Callback mCallback;
-    private float[] mProjectionMatrix = new float[16];
+    private int mDisplayOrientation;
+    //    private float[] mProjectionMatrix = new float[16];
     private float[] mSurfaceMatrix = new float[16];
     private float[] mTransformMatrix = new float[16];
-//    private int mOESTextureId = OpenGLUtils.NO_TEXTURE;
+//    private float[] mProjectionMatrix = {
+//            1, 0, 0, 0,
+//            0, 1, 0, 0,
+//            0, 0, -1, 0,
+//            0, 0, 0, 1
+//    };
+    //返回的是以列为主排序的矩阵
+    private float[] mTransformMatrix_face = {
+            0, 1, 0, 0,
+            1, 0, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1
+    };
+    private float[] mTransformMatrix_back = {
+            0, -1, 0, 0,
+            -1, 0, 0, 0,
+            0, 0, 1, 0,
+            1, 1, 0, 1
+    };
+
+    //    private int mOESTextureId = OpenGLUtils.NO_TEXTURE;
     public GLSurfaceTexturePreview(Context context, ViewGroup viewParent) {
         mContext = context;
         final View view = View.inflate(context, R.layout.gl_surface_view, viewParent);
@@ -47,12 +68,12 @@ public class GLSurfaceTexturePreview implements GLSurfaceView.Renderer {
         mGLSurfaceView.setEGLContextClientVersion(2);//设置opgles版本
         mGLSurfaceView.setRenderer(this);//设置渲染回调方法
         mGLSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_WHEN_DIRTY);//设置为手动模式
-        Log.i(TAG,"GLSurfaceTexturePreview");
+        Log.i(TAG, "GLSurfaceTexturePreview");
     }
 
     @Override
     public void onSurfaceCreated(GL10 gl10, EGLConfig eglConfig) {
-        Log.i(TAG,"onSurfaceCreated");
+        Log.i(TAG, "onSurfaceCreated");
         magicFilter = new GPUImageFilter(MagicFilterType.NONE);
         magicFilter.init(mContext.getApplicationContext());
 
@@ -65,55 +86,68 @@ public class GLSurfaceTexturePreview implements GLSurfaceView.Renderer {
         surfaceTexture.setOnFrameAvailableListener(new SurfaceTexture.OnFrameAvailableListener() {
             @Override
             public void onFrameAvailable(SurfaceTexture surfaceTexture) {
-                Log.i(TAG,"onFrameAvailable:图像纹理更新");
+                Log.i(TAG, "onFrameAvailable:图像纹理更新");
                 mGLSurfaceView.requestRender();
             }
         });
     }
-    private float mOutputAspectRatio;
-    private float mInputAspectRatio;
+
+//    private float mOutputAspectRatio;
+//    private float mInputAspectRatio;
+
     @Override
     public void onSurfaceChanged(GL10 gl10, int i, int i1) {
-        Log.i(TAG,"onSurfaceChanged");
-        GLES20.glViewport(0,0,i,i1);
+        Log.i(TAG, "onSurfaceChanged");
+        GLES20.glViewport(0, 0, i, i1);
         //设置surfaceview的宽高
-        setSize(i,i1);
+        setSize(i, i1);
         magicFilter.onDisplaySizeChanged(i, i1);
         magicFilter.onInputSizeChanged(i, i1);
 
-        mOutputAspectRatio = i > i1 ? (float) i / i1 : (float) i1 / i;
-        float aspectRatio = mOutputAspectRatio / mInputAspectRatio;
-        if (i > i1) {
-            Matrix.orthoM(mProjectionMatrix, 0, -1.0f, 1.0f, -aspectRatio, aspectRatio, -1.0f, 1.0f);
-        } else {
-            Matrix.orthoM(mProjectionMatrix, 0, -aspectRatio, aspectRatio, -1.0f, 1.0f, -1.0f, 1.0f);
-        }
+//        mOutputAspectRatio = i > i1 ? (float) i / i1 : (float) i1 / i;
+//        float aspectRatio = mOutputAspectRatio / mInputAspectRatio;
+//        if (i > i1) {
+//            Matrix.orthoM(mProjectionMatrix, 0, -1.0f, 1.0f, -aspectRatio, aspectRatio, -1.0f, 1.0f);
+//        } else {
+//            Matrix.orthoM(mProjectionMatrix, 0, -aspectRatio, aspectRatio, -1.0f, 1.0f, -1.0f, 1.0f);
+//        }
         if (mCallback != null)
-        mCallback.onSurfaceChanged();
+            mCallback.onSurfaceChanged();
     }
 
     @Override
     public void onDrawFrame(GL10 gl10) {
-       //接收帧的刷新
-//        GLES20.glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-//        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
-
+        //接收帧的刷新
         surfaceTexture.updateTexImage();
         //获得纹理的矩阵
         surfaceTexture.getTransformMatrix(mSurfaceMatrix);
+        Log.i(TAG, "ff: --------------start----------------");
+        Log.i(TAG, "ff:" + mSurfaceMatrix.length);
+        for (int i = 0; i < mSurfaceMatrix.length; i++) {
+            Log.i(TAG, "i position:" + i + "ff:" + mSurfaceMatrix[i]);
+        }
+        Log.i(TAG, "ff: --------------end----------------");
+        Log.i(TAG, "mff: --------------start----------------");
 //        Matrix.multiplyMM(mTransformMatrix, 0, mSurfaceMatrix, 0, mProjectionMatrix, 0);
-        magicFilter.setTextureTransformMatrix(mSurfaceMatrix);
+        for (int i = 0; i < mTransformMatrix.length; i++) {
+            Log.i(TAG, "mi position:" + i + "mff:" + mTransformMatrix[i]);
+        }
+        Log.i(TAG, "mff: --------------end----------------");
+        //opengl默认逆时针旋转
+        magicFilter.setTextureTransformMatrix(mTransformMatrix);
         magicFilter.onDrawFrame(mOESTextureId);
     }
-    public SurfaceTexture getSurfaceTexture(){
+
+    public SurfaceTexture getSurfaceTexture() {
         return surfaceTexture;
     }
+
     public void setSize(int width, int height) {
         mWidth = width;
         mHeight = height;
 
-        mInputAspectRatio = width > height ?
-                (float) width / height : (float) width / height;
+//        mInputAspectRatio = width > height ?
+//                (float) width / height : (float) width / height;
     }
 
     public int getSurfaceWidth() {
@@ -123,11 +157,28 @@ public class GLSurfaceTexturePreview implements GLSurfaceView.Renderer {
     public int getSurfaceHeight() {
         return mHeight;
     }
-    public void setCallback(Callback callback){
+
+    public void setCallback(Callback callback) {
         mCallback = callback;
     }
-    public View getView(){
+
+    public View getView() {
         return mGLSurfaceView;
+    }
+    public void setDisplayOrientation(int displayOrientation) {
+        mDisplayOrientation = displayOrientation;
+        switch (mDisplayOrientation){
+            case 0:
+                break;
+            case 90:
+                mTransformMatrix = mTransformMatrix_back;
+                break;
+            case 180:
+                break;
+            case 270:
+                mTransformMatrix = mTransformMatrix_face;
+                break;
+        }
     }
     public interface Callback {
         void onSurfaceCreated();

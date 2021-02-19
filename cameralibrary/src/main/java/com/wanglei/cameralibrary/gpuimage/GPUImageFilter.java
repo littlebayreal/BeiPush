@@ -140,6 +140,10 @@ public class GPUImageFilter {
         };
         //初始化片元矩阵
         final float TEX_COORD[] = {
+//                0.0f, 0.0f, // Bottom left.
+//                0.0f, 1.0f, // Bottom right.
+//                1.0f, 0.0f, // Top left.
+//                1.0f, 1.0f // Top right.
 //                0.0f, 1.0f, // Bottom left.
 //                0.0f, 0.0f, // Bottom right.
 //                1.0f, 1.0f, // Top left.
@@ -275,6 +279,7 @@ public class GPUImageFilter {
         //启用片元索引
         GLES20.glEnableVertexAttribArray(mGLTextureCoordinateIndex);
         GLES20.glVertexAttribPointer(mGLTextureCoordinateIndex, 2, GLES20.GL_FLOAT, false, 4 * 2, 0);
+
         GLES20.glUniformMatrix4fv(mGLTextureTransformIndex, 1, false, mGLTextureTransformMatrix, 0);
 
         //激活用来显示图片的窗口/画框  采样器的纹理单元要一致 texture0 对应 0

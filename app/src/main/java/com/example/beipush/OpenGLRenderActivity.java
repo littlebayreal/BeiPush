@@ -5,17 +5,25 @@ import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.os.Bundle;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.ImageView;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.fragment.app.FragmentManager;
 
 import com.wanglei.cameralibrary.CameraGLView;
 import com.wanglei.cameralibrary.CameraView;
+import com.wanglei.cameralibrary.base.AspectRatio;
 import com.wanglei.cameralibrary.camera.Camera1ForGL;
+
+import java.util.Set;
 
 /**
  * Created by LiTtleBayReal.
@@ -61,9 +69,16 @@ public class OpenGLRenderActivity extends AppCompatActivity implements SensorCon
         sensorControler = SensorController.getInstance(this);
         sensorControler.setCameraFocusListener(this);
 
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        ActionBar actionBar = getSupportActionBar();
+        if (actionBar != null) {
+            actionBar.setDisplayShowTitleEnabled(false);
+        }
+
         ivFoucView = findViewById(R.id.iv_focus);
         mCameraView = findViewById(R.id.camera);
-        mCameraView.setFacing(CameraView.FACING_FRONT);
+        mCameraView.setFacing(CameraView.FACING_BACK);
     }
 
     @Override
@@ -161,5 +176,42 @@ public class OpenGLRenderActivity extends AppCompatActivity implements SensorCon
     @Override
     public void onFocus() {
         mCameraView.autoFocus();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.main, menu);
+        return true;
+    }
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.aspect_ratio:
+                FragmentManager fragmentManager = getSupportFragmentManager();
+                if (mCameraView != null
+                        && fragmentManager.findFragmentByTag(FRAGMENT_DIALOG) == null) {
+                    final Set<AspectRatio> ratios = mCameraView.getSupportedAspectRatios();
+                    final AspectRatio currentRatio = mCameraView.getAspectRatio();
+                    AspectRatioFragment.newInstance(ratios, currentRatio)
+                            .show(fragmentManager, FRAGMENT_DIALOG);
+                }
+                return true;
+            case R.id.switch_flash:
+                if (mCameraView != null) {
+                    mCurrentFlash = (mCurrentFlash + 1) % FLASH_OPTIONS.length;
+                    item.setTitle(FLASH_TITLES[mCurrentFlash]);
+                    item.setIcon(FLASH_ICONS[mCurrentFlash]);
+                    mCameraView.setFlash(FLASH_OPTIONS[mCurrentFlash]);
+                }
+                return true;
+            case R.id.switch_camera:
+                if (mCameraView != null) {
+                    int facing = mCameraView.getFacing();
+                    mCameraView.setFacing(facing == CameraView.FACING_FRONT ?
+                            CameraView.FACING_BACK : CameraView.FACING_FRONT);
+                }
+                return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 }

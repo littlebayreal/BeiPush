@@ -11,11 +11,12 @@ uniform samplerExternalOES inputImageTexture;
 //}
 void main(){
     vec2 uv = textureCoordinate.xy;
-    float x;
-    if (uv.x >= 0.0 && uv.x <= 0.5) {
-        x = uv.x + 0.25;
-    }else{
-        x = uv.x - 0.25;
-    }
-    gl_FragColor = texture2D(inputImageTexture, vec2(x, uv.y));
+//    float x;
+//    if (uv.x >= 0.0 && uv.x <= 0.5) {
+//        x = uv.x + 0.25;
+//    }else{
+//        x = uv.x - 0.25;
+//    }
+//    gl_FragColor = texture2D(inputImageTexture, vec2(x, uv.y));
+    gl_FragColor = texture2D(inputImageTexture, uv);
 }

@@ -63,7 +63,7 @@ public class Camera1ForGL {
 
     private int mDisplayOrientation;
 
-    public Camera1ForGL(Callback callback, GLSurfaceTexturePreview glSurfaceTexturePreview){
+    public Camera1ForGL(Callback callback, GLSurfaceTexturePreview glSurfaceTexturePreview) {
         this.mCallback = callback;
         this.mGLSurfaceTexturePreview = glSurfaceTexturePreview;
         glSurfaceTexturePreview.setCallback(new GLSurfaceTexturePreview.Callback() {
@@ -84,8 +84,9 @@ public class Camera1ForGL {
             }
         });
     }
-    public boolean start(){
-        Log.i(TAG,"start preview");
+
+    public boolean start() {
+        Log.i(TAG, "start preview");
         chooseCamera();
         openCamera();
         setUpPreview();
@@ -133,15 +134,18 @@ public class Camera1ForGL {
         mCamera.setDisplayOrientation(calcDisplayOrientation(mDisplayOrientation));
         mCallback.onCameraOpened();
     }
+
     void setUpPreview() {
         try {
-            Log.i(TAG,"setUpPreview:"+ mGLSurfaceTexturePreview.getSurfaceTexture());
+            Log.i(TAG, "setUpPreview:" + mGLSurfaceTexturePreview.getSurfaceTexture());
             mCamera.setPreviewTexture(mGLSurfaceTexturePreview.getSurfaceTexture());
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
+
     private byte[] buffer;
+
     void adjustCameraParameters() {
         SortedSet<Size> sizes = mPreviewSizes.sizes(mAspectRatio);
         if (sizes == null) { // Not supported
@@ -154,11 +158,11 @@ public class Camera1ForGL {
         // Largest picture size in this ratio
         //拍摄帧往往选择尺寸最大的，那样拍摄的图片更清楚
         SortedSet<Size> picSizes = mPictureSizes.sizes(mAspectRatio);
-        if (picSizes == null){
+        if (picSizes == null) {
             AspectRatio mPicAspectRatio = choosePicAspectRatio();
             picSizes = mPictureSizes.sizes(mPicAspectRatio);
         }
-        final Size pictureSize =picSizes.last();
+        final Size pictureSize = picSizes.last();
         if (mShowingPreview) {
             mCamera.stopPreview();
         }
@@ -172,7 +176,9 @@ public class Camera1ForGL {
         mCamera.addCallbackBuffer(buffer);
 //        mCamera.setPreviewCallbackWithBuffer(this);
         mCameraParameters.setPictureSize(pictureSize.getWidth(), pictureSize.getHeight());
+        Log.i(TAG,"mDisplayOrientation:"+ calcCameraRotation(mDisplayOrientation));
         mCameraParameters.setRotation(calcCameraRotation(mDisplayOrientation));
+        mGLSurfaceTexturePreview.setDisplayOrientation(calcCameraRotation(mDisplayOrientation));
         setAutoFocusInternal(mAutoFocus);
         setFlashInternal(mFlash);
         mCamera.setParameters(mCameraParameters);
@@ -180,6 +186,7 @@ public class Camera1ForGL {
             mCamera.startPreview();
         }
     }
+
     @SuppressWarnings("SuspiciousNameCombination")
     //选择最理想的尺寸
     private Size chooseOptimalSize(SortedSet<Size> sizes) {
@@ -206,12 +213,13 @@ public class Camera1ForGL {
         }
         return result;
     }
+
     /**
      * Calculate display orientation
      * https://developer.android.com/reference/android/hardware/Camera.html#setDisplayOrientation(int)
-     *
+     * <p>
      * This calculation is used for orienting the preview
-     *
+     * <p>
      * Note: This is not the same calculation as the camera rotation
      *
      * @param screenOrientationDegrees Screen orientation in degrees
@@ -224,6 +232,7 @@ public class Camera1ForGL {
             return (mCameraInfo.orientation - screenOrientationDegrees + 360) % 360;
         }
     }
+
     private void releaseCamera() {
         if (mCamera != null) {
             mCamera.release();
@@ -231,6 +240,7 @@ public class Camera1ForGL {
             mCallback.onCameraClosed();
         }
     }
+
     /**
      * Test if the supplied orientation is in landscape.
      *
@@ -241,6 +251,7 @@ public class Camera1ForGL {
         return (orientationDegrees == Constants.LANDSCAPE_90 ||
                 orientationDegrees == Constants.LANDSCAPE_270);
     }
+
     /**
      * @return {@code true} if {@link #mCameraParameters} was modified.
      */
@@ -287,12 +298,13 @@ public class Camera1ForGL {
             return false;
         }
     }
+
     /**
      * Calculate camera rotation
-     *
+     * <p>
      * This calculation is applied to the output JPEG either via Exif Orientation tag
      * or by actually transforming the bitmap. (Determined by vendor camera API implementation)
-     *
+     * <p>
      * Note: This is not the same calculation as the display orientation
      *
      * @param screenOrientationDegrees Screen orientation in degrees
@@ -306,17 +318,21 @@ public class Camera1ForGL {
             return (mCameraInfo.orientation + screenOrientationDegrees + landscapeFlip) % 360;
         }
     }
+
     public void setDisplayOrientation(int displayOrientation) {
         if (mDisplayOrientation == displayOrientation) {
             return;
         }
         mDisplayOrientation = displayOrientation;
         if (isCameraOpened()) {
+            Log.i(TAG,"rotation:"+ calcCameraRotation(displayOrientation));
             mCameraParameters.setRotation(calcCameraRotation(displayOrientation));
             mCamera.setParameters(mCameraParameters);
             mCamera.setDisplayOrientation(calcDisplayOrientation(displayOrientation));
         }
-    }    public void setFacing(int facing) {
+    }
+
+    public void setFacing(int facing) {
         if (mFacing == facing) {
             return;
         }
@@ -326,6 +342,7 @@ public class Camera1ForGL {
             start();
         }
     }
+
     public int getFacing() {
         return mFacing;
     }
@@ -370,6 +387,7 @@ public class Camera1ForGL {
             mCamera.setParameters(mCameraParameters);
         }
     }
+
     public boolean getAutoFocus() {
         if (!isCameraOpened()) {
             return mAutoFocus;
@@ -377,6 +395,7 @@ public class Camera1ForGL {
         String focusMode = mCameraParameters.getFocusMode();
         return focusMode != null && focusMode.contains("continuous");
     }
+
     private AspectRatio choosePreviewAspectRatio() {
         AspectRatio r = null;
         for (AspectRatio ratio : mPreviewSizes.ratios()) {
@@ -387,6 +406,7 @@ public class Camera1ForGL {
         }
         return r;
     }
+
     private AspectRatio choosePicAspectRatio() {
         AspectRatio r = null;
         for (AspectRatio ratio : mPictureSizes.ratios()) {
@@ -397,15 +417,19 @@ public class Camera1ForGL {
         }
         return r;
     }
+
     public boolean isCameraOpened() {
         return mCamera != null;
     }
+
     public boolean isReady() {
         return mGLSurfaceTexturePreview != null;
     }
+
     public View getView() {
         return mGLSurfaceTexturePreview.getView();
     }
+
     public void stop() {
         if (mCamera != null) {
             mCamera.stopPreview();
@@ -414,7 +438,9 @@ public class Camera1ForGL {
         isFocusing = false;
         releaseCamera();
     }
+
     private boolean isFocusing = false;
+
     public void autoFocus() {
         try {
             if (mCamera != null && !isFocusing && mShowingPreview) { //camera不为空，并且isFocusing=false的时候才去对焦
@@ -444,6 +470,7 @@ public class Camera1ForGL {
     public int getFlash() {
         return mFlash;
     }
+
     public interface Callback {
 
         void onCameraOpened();
