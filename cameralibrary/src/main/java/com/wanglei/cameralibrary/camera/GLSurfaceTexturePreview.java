@@ -101,6 +101,9 @@ public class GLSurfaceTexturePreview implements GLSurfaceView.Renderer {
         surfaceTexture.updateTexImage();
         //获得纹理的矩阵
         surfaceTexture.getTransformMatrix(mSurfaceMatrix);
+        for (float f:mSurfaceMatrix) {
+            Log.i(TAG,"mSurfaceMatrix:"+ f);
+        }
 //        Matrix.multiplyMM(mTransformMatrix, 0, mSurfaceMatrix, 0, mProjectionMatrix, 0);
         magicFilter.setTextureTransformMatrix(mSurfaceMatrix);
         magicFilter.onDrawFrame(mOESTextureId);
