@@ -55,5 +55,6 @@ public enum  MagicFilterType {
     HUE,
     SATURATION,
     SHARPEN,
-    IMAGE_ADJUST
+    IMAGE_ADJUST,
+    MULTI_BLUR
 }

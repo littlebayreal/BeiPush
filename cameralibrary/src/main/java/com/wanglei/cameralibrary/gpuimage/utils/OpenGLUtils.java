@@ -6,6 +6,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
+import android.opengl.GLES30;
 import android.opengl.GLUtils;
 import android.util.Log;
 
@@ -18,6 +19,7 @@ import java.nio.Buffer;
 import javax.microedition.khronos.opengles.GL10;
 
 public class OpenGLUtils {
+    private static final String TAG = "OpenGLUtils";
     public static final int NO_TEXTURE = -1;
     public static final int NOT_INIT = -1;
     public static final int ON_DRAWN = 1;
@@ -226,5 +228,17 @@ public class OpenGLUtils {
             return null;
         }
         return body.toString();
+    }
+    /**
+     * 检查是否出错
+     * @param op
+     */
+    public static void checkGlError(String op) {
+        int error = GLES20.glGetError();
+        if (error != GLES30.GL_NO_ERROR) {
+            String msg = op + ": glError 0x" + Integer.toHexString(error);
+            Log.e(TAG, msg);
+//            throw new RuntimeException(msg);
+        }
     }
 }

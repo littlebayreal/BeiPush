@@ -14,6 +14,8 @@ import android.view.ViewParent;
 
 import com.wanglei.cameralibrary.R;
 import com.wanglei.cameralibrary.gpuimage.GPUImageFilter;
+import com.wanglei.cameralibrary.gpuimage.GPUImageGaussPassFilter;
+import com.wanglei.cameralibrary.gpuimage.GPUImageMultiBlurFilter;
 import com.wanglei.cameralibrary.gpuimage.utils.MagicFilterType;
 
 import javax.microedition.khronos.egl.EGLConfig;
@@ -26,6 +28,7 @@ public class GLSurfaceTexturePreview implements GLSurfaceView.Renderer {
     private GLSurfaceView mGLSurfaceView;
     private Context mContext;
     //用来接收摄像头的数据 通过它传输给surfaceview
+//    private GPUImageFilter magicFilter;
     private GPUImageFilter magicFilter;
     private SurfaceTexture surfaceTexture;
     private int mOESTextureId;
@@ -76,7 +79,7 @@ public class GLSurfaceTexturePreview implements GLSurfaceView.Renderer {
         Log.i(TAG, "onSurfaceCreated");
         magicFilter = new GPUImageFilter(MagicFilterType.NONE);
         magicFilter.init(mContext.getApplicationContext());
-
+//        magicFilter.setBlurSize(1.0f);
 
         int[] textures = new int[1];
         GLES20.glGenTextures(1, textures, 0);
@@ -94,16 +97,16 @@ public class GLSurfaceTexturePreview implements GLSurfaceView.Renderer {
 
 //    private float mOutputAspectRatio;
 //    private float mInputAspectRatio;
-
     @Override
     public void onSurfaceChanged(GL10 gl10, int i, int i1) {
         Log.i(TAG, "onSurfaceChanged");
         GLES20.glViewport(0, 0, i, i1);
         //设置surfaceview的宽高
         setSize(i, i1);
+        // TODO: 2021/2/24  暂时设置成一样的 不够严谨
         magicFilter.onDisplaySizeChanged(i, i1);
         magicFilter.onInputSizeChanged(i, i1);
-
+//        magicFilter.setTexelOffsetSize(i,i1);
 //        mOutputAspectRatio = i > i1 ? (float) i / i1 : (float) i1 / i;
 //        float aspectRatio = mOutputAspectRatio / mInputAspectRatio;
 //        if (i > i1) {
@@ -133,7 +136,6 @@ public class GLSurfaceTexturePreview implements GLSurfaceView.Renderer {
             Log.i(TAG, "mi position:" + i + "mff:" + mTransformMatrix[i]);
         }
         Log.i(TAG, "mff: --------------end----------------");
-        //opengl默认逆时针旋转
         magicFilter.setTextureTransformMatrix(mTransformMatrix);
         magicFilter.onDrawFrame(mOESTextureId);
     }

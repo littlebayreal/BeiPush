@@ -20,6 +20,8 @@ import android.content.Context;
 import android.graphics.PointF;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
+import android.opengl.GLES30;
+import android.util.Log;
 
 
 import com.wanglei.cameralibrary.R;
@@ -128,6 +130,9 @@ public class GPUImageFilter {
         mGLTextureCoordinateIndex = GLES20.glGetAttribLocation(mGLProgId, "inputTextureCoordinate");
         mGLTextureTransformIndex = GLES20.glGetUniformLocation(mGLProgId, "textureTransform");
         mGLInputImageTextureIndex = GLES20.glGetUniformLocation(mGLProgId, "inputImageTexture");
+
+        Log.i("zxb","mGLPositionIndex:"+ mGLPositionIndex + "mGLTextureCoordinateIndex:"+ mGLInputImageTextureIndex
+                + "mGLTextureTransformIndex:"+ mGLTextureTransformIndex + "mGLInputImageTextureIndex:"+ mGLInputImageTextureIndex);
     }
 
     //初始化顶点矩阵
@@ -284,30 +289,31 @@ public class GPUImageFilter {
 
         //激活用来显示图片的窗口/画框  采样器的纹理单元要一致 texture0 对应 0
         GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
-        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
-//        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,cameraTextureId);
+//        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, cameraTextureId);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,cameraTextureId);
         GLES20.glUniform1i(mGLInputImageTextureIndex, 0);
 
         onDrawArraysPre();
 
-        GLES20.glViewport(0, 0, mInputWidth, mInputHeight);
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, mGLFboId[0]);
-        //参数1：有三种取值
-        //1.GL_TRIANGLES：每三个顶之间绘制三角形，之间不连接
-        //2.GL_TRIANGLE_FAN：以V0V1V2,V0V2V3,V0V3V4，……的形式绘制三角形
-        //3.GL_TRIANGLE_STRIP：顺序在每三个顶点之间均绘制三角形。这个方法可以保证从相同的方向上
-        //参数2：从数组缓存中的哪一位开始绘制，一般都定义为0
-        //参数3：顶点的数量
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
-        GLES20.glReadPixels(0, 0, mInputWidth, mInputHeight, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mGLFboBuffer);
-        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
+//        GLES20.glViewport(0, 0, mInputWidth, mInputHeight);
+//        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, mGLFboId[0]);
+//        //参数1：有三种取值
+//        //1.GL_TRIANGLES：每三个顶之间绘制三角形，之间不连接
+//        //2.GL_TRIANGLE_FAN：以V0V1V2,V0V2V3,V0V3V4，……的形式绘制三角形
+//        //3.GL_TRIANGLE_STRIP：顺序在每三个顶点之间均绘制三角形。这个方法可以保证从相同的方向上
+//        //参数2：从数组缓存中的哪一位开始绘制，一般都定义为0
+//        //参数3：顶点的数量
+//        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
+//        GLES20.glReadPixels(0, 0, mInputWidth, mInputHeight, GLES20.GL_RGBA, GLES20.GL_UNSIGNED_BYTE, mGLFboBuffer);
+//        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, 0);
         GLES20.glViewport(0, 0, mOutputWidth, mOutputHeight);
 
         GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
 
         onDrawArraysAfter();
         //将变量置空或关闭
-        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0);
+//        GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, 0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D,0);
         GLES20.glDisableVertexAttribArray(mGLPositionIndex);
         GLES20.glDisableVertexAttribArray(mGLTextureCoordinateIndex);
         GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
@@ -315,6 +321,29 @@ public class GPUImageFilter {
         return mGLFboTexId[0];
     }
 
+    /**
+     * 绘制到FBO
+     * @return
+     */
+    public int onDrawFrameBuffer(int textureId){
+        if (!mIsInitialized) {
+            return OpenGLUtils.NOT_INIT;
+        }
+        if (mGLFboId == null) {
+            return OpenGLUtils.NO_TEXTURE;
+        }
+        // 绑定FBO
+        GLES20.glViewport(0, 0, mInputWidth, mInputHeight);
+        GLES20.glBindFramebuffer(GLES20.GL_FRAMEBUFFER, mGLFboId[0]);
+        // 使用当前的program
+        GLES30.glUseProgram(mGLProgId);
+        // 运行延时任务，这个要放在glUseProgram之后，要不然某些设置项会不生效 主要是设置变量值
+        runPendingOnDrawTasks();
+
+        GLES30.glUseProgram(0);
+        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0);
+        return mGLFboId[0];
+    }
     protected void onDrawArraysPre() {
     }
 
