@@ -1,7 +1,10 @@
+#extension GL_OES_EGL_image_external : require
 // 优化后的高斯模糊
 precision mediump float;
 varying vec2 textureCoordinate;
 uniform sampler2D inputImageTexture;
+//sampler2D和samplerExternalOES的区别??
+//uniform samplerExternalOES inputImageTexture;
 // 高斯算子左右偏移值，当偏移值为2时，高斯算子为5 x 5
 const int SHIFT_SIZE = 2;
 varying vec4 blurShiftCoordinates[SHIFT_SIZE];

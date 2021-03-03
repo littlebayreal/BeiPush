@@ -3,6 +3,7 @@ package com.wanglei.cameralibrary.gpuimage;
 import android.content.Context;
 import android.opengl.GLES20;
 import android.opengl.GLES30;
+import android.util.Log;
 
 import com.wanglei.cameralibrary.R;
 import com.wanglei.cameralibrary.gpuimage.utils.MagicFilterType;
@@ -35,24 +36,35 @@ public class GPUImageMultiBlurFilter extends GPUImageFilter{
     }
 
     @Override
-    public void init(Context context) {
-        super.init(context);
+    public void onInit() {
+        super.onInit();
+        if (mGaussianBlurFilter != null)
+            mGaussianBlurFilter.init(getContext());
         if (getProgram() != OpenGLUtils.NOT_INIT) {
             mBlurTextureHandle = GLES30.glGetUniformLocation(getProgram(), "blurTexture");
+            Log.i("zzz","blurTexture:"+ mBlurTextureHandle);
             mBlurOffsetYHandle = GLES30.glGetUniformLocation(getProgram(), "blurOffsetY");
             mScaleHandle = GLES30.glGetUniformLocation(getProgram(), "scale");
             setBlurOffset(0.33f);
         }
     }
+
+    @Override
+    protected void onInitialized() {
+        super.onInitialized();
+    }
+
     @Override
     public void onDrawArraysPre() {
         super.onDrawArraysPre();
+        Log.i("zxb","mBlurTexture:"+ mBlurTexture);
         if (mBlurTexture != OpenGLUtils.NO_TEXTURE) {
-            //激活纹理单元0 并将高斯模糊纹理绑定到上面
-            GLES20.glActiveTexture(GLES30.GL_TEXTURE0);
-            GLES20.glBindTexture(GLES30.GL_TEXTURE_2D, mBlurTexture);
+            Log.i("zxb","onDrawArraysPre 激活纹理单元1");
+            //激活纹理单元1 并将高斯模糊纹理绑定到上面
+            GLES20.glActiveTexture(GLES20.GL_TEXTURE1);
+            GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, mBlurTexture);
             //设置采样器到正确的纹理单元
-            GLES20.glUniform1i(mBlurTextureHandle, 0);
+            GLES20.glUniform1i(mBlurTextureHandle, 1);
         }
         GLES20.glUniform1f(mScaleHandle, mScale);
     }
@@ -61,7 +73,6 @@ public class GPUImageMultiBlurFilter extends GPUImageFilter{
         super.onInputSizeChanged(width, height);
         if (mGaussianBlurFilter != null) {
             mGaussianBlurFilter.onInputSizeChanged((int) (width * mBlurScale), (int) (height * mBlurScale));
-//            mGaussianBlurFilter.initFrameBuffer((int)(width * mBlurScale), (int)(height * mBlurScale));
         }
     }
 
@@ -77,7 +88,9 @@ public class GPUImageMultiBlurFilter extends GPUImageFilter{
     public int onDrawFrame(int textureId) {
         if (mGaussianBlurFilter != null) {
             //先生成模糊纹理
+            Log.i("vvv","GPUImageMultiBlurFilter textureId:"+ textureId);
             mBlurTexture = mGaussianBlurFilter.onDrawFrameBuffer(textureId);
+            Log.i("vvv","GPUImageMultiBlurFilter mBlurTexture:"+ mBlurTexture);
         }
         //生成想要的纹理并绘制到屏幕
         return super.onDrawFrame(textureId);

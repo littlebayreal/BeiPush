@@ -2,6 +2,7 @@ package com.wanglei.cameralibrary.gpuimage;
 
 import android.content.Context;
 import android.opengl.GLES20;
+import android.util.Log;
 
 import com.wanglei.cameralibrary.R;
 import com.wanglei.cameralibrary.gpuimage.utils.MagicFilterType;
@@ -34,6 +35,7 @@ public class GPUImageGaussPassFilter extends GPUImageFilter{
     @Override
     public void onInitialized() {
         super.onInitialized();
+        setBlurSize(1.0f);
     }
     /**
      * 设置模糊半径大小，默认为1.0f
@@ -48,6 +50,7 @@ public class GPUImageGaussPassFilter extends GPUImageFilter{
      * @param height
      */
     public void setTexelOffsetSize(float width, float height) {
+//        Log.i("zxb","setTexelOffsetSize:mBlurSize"+ mBlurSize + "")
         mTexelWidth = width;
         mTexelHeight = height;
         if (mTexelWidth != 0) {

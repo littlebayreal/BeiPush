@@ -1,6 +1,7 @@
 package com.wanglei.cameralibrary.gpuimage;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.wanglei.cameralibrary.R;
 import com.wanglei.cameralibrary.gpuimage.utils.MagicFilterType;
@@ -41,6 +42,11 @@ public class GPUImageGaussianBlurFilter extends GPUImageFilter{
     }
 
     @Override
+    protected void onInitialized() {
+        super.onInitialized();
+    }
+
+    @Override
     public void onInputSizeChanged(int width, int height) {
         super.onInputSizeChanged(width, height);
         if (mVerticalPassFilter != null) {
@@ -54,6 +60,17 @@ public class GPUImageGaussianBlurFilter extends GPUImageFilter{
     }
 
     @Override
+    public void onDisplaySizeChanged(int width, int height) {
+        super.onDisplaySizeChanged(width, height);
+        if (mVerticalPassFilter != null) {
+            mVerticalPassFilter.onDisplaySizeChanged(width, height);
+        }
+        if (mHorizontalPassFilter != null) {
+            mHorizontalPassFilter.onDisplaySizeChanged(width, height);
+        }
+    }
+
+    @Override
     public int onDrawFrameBuffer(int textureId) {
         mCurrentTexture = textureId;
         if (mCurrentTexture == OpenGLUtils.NO_TEXTURE) {
@@ -61,7 +78,9 @@ public class GPUImageGaussianBlurFilter extends GPUImageFilter{
         }
         //绘制高斯模糊到texture
         if (mVerticalPassFilter != null) {
+            Log.i("vvv","GPUImageGaussianBlurFilter mCurrentTexture:"+ mCurrentTexture);
             mCurrentTexture = mVerticalPassFilter.onDrawFrameBuffer(mCurrentTexture);
+            Log.i("vvv","GPUImageGaussianBlurFilter mCurrentTexture:"+ mCurrentTexture);
         }
         if (mHorizontalPassFilter != null) {
             mCurrentTexture = mHorizontalPassFilter.onDrawFrameBuffer(mCurrentTexture);

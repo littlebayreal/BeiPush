@@ -17,7 +17,7 @@ void main() {
     } else { // 边框部分使用高斯模糊的图像
         vec2 center = vec2(0.5, 0.5);
         uv -= center;
-        uv = uv / scale;
+        uv = uv * scale;
         uv += center;
         color = texture2D(blurTexture, uv);
     }

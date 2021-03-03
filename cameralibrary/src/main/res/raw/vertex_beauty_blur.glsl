@@ -9,7 +9,7 @@ uniform highp float texelHeightOffset;
 
 varying vec2 textureCoordinate;
 varying vec4 blurShiftCoordinates[SHIFT_SIZE];
-
+//uniform mat4 textureTransform;
 void main() {
     gl_Position = position;
     textureCoordinate = inputTextureCoordinate.xy;

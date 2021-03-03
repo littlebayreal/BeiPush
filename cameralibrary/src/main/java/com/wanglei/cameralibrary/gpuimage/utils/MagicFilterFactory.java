@@ -2,6 +2,8 @@ package com.wanglei.cameralibrary.gpuimage.utils;
 
 
 import com.wanglei.cameralibrary.gpuimage.GPUImageFilter;
+import com.wanglei.cameralibrary.gpuimage.GPUImageHueFilter;
+import com.wanglei.cameralibrary.gpuimage.advance.MagicBeautyFilter;
 
 public class MagicFilterFactory {
 
@@ -15,8 +17,8 @@ public class MagicFilterFactory {
 //                return new MagicBlackCatFilter();
 //            case SKINWHITEN:
 //                return new MagicSkinWhitenFilter();
-//            case BEAUTY:
-//                return new MagicBeautyFilter();
+            case BEAUTY:
+                return new MagicBeautyFilter();
 //            case ROMANCE:
 //                return new MagicRomanceFilter();
 //            case SAKURA:

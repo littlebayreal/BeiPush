@@ -7,7 +7,7 @@ uniform mat4 textureTransform;
 
 void main() {
 //    vec4 temp = vec4(inputTextureCoordinate.xy,0.0,1.0);
-    textureCoordinate = (textureTransform * inputTextureCoordinate).xy;
+//    textureCoordinate = (textureTransform * inputTextureCoordinate).xy;
     gl_Position = position;
-//    textureCoordinate = vec2(inputTextureCoordinate.x,inputTextureCoordinate.y);
+    textureCoordinate = vec2(inputTextureCoordinate.x,inputTextureCoordinate.y);
 }

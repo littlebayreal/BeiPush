@@ -48,6 +48,6 @@ void main() {
     // 记录偏移坐标
     for (int i = 0; i < SHIFT_SIZE; i++) {
         blurShiftCoordinates[i] = vec4(textureCoordinate.xy - float(i + 1) * singleStepOffset,
-                                       textureCoordinate.xy + float(i + 1) * singleStepOffset);
+        textureCoordinate.xy + float(i + 1) * singleStepOffset);
     }
 }

@@ -15,8 +15,14 @@ import android.view.ViewParent;
 import com.wanglei.cameralibrary.R;
 import com.wanglei.cameralibrary.gpuimage.GPUImageFilter;
 import com.wanglei.cameralibrary.gpuimage.GPUImageGaussPassFilter;
+import com.wanglei.cameralibrary.gpuimage.GPUImageGaussianBlurFilter;
+import com.wanglei.cameralibrary.gpuimage.GPUImageHueFilter;
+import com.wanglei.cameralibrary.gpuimage.GPUImageInputOESFilter;
 import com.wanglei.cameralibrary.gpuimage.GPUImageMultiBlurFilter;
+import com.wanglei.cameralibrary.gpuimage.advance.MagicBeautyFilter;
+import com.wanglei.cameralibrary.gpuimage.utils.MagicFilterFactory;
 import com.wanglei.cameralibrary.gpuimage.utils.MagicFilterType;
+import com.wanglei.cameralibrary.gpuimage.utils.OpenGLUtils;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -28,10 +34,11 @@ public class GLSurfaceTexturePreview implements GLSurfaceView.Renderer {
     private GLSurfaceView mGLSurfaceView;
     private Context mContext;
     //用来接收摄像头的数据 通过它传输给surfaceview
-//    private GPUImageFilter magicFilter;
-    private GPUImageFilter magicFilter;
+//    private GPUImageHueFilter magicFilter;
+    private GPUImageInputOESFilter magicFilter;
+    private GPUImageMultiBlurFilter gpuImageMultiBlurFilter;
     private SurfaceTexture surfaceTexture;
-    private int mOESTextureId;
+    private int mOESTextureId = OpenGLUtils.NO_TEXTURE;
     private int mWidth;
     private int mHeight;
     private Callback mCallback;
@@ -77,13 +84,17 @@ public class GLSurfaceTexturePreview implements GLSurfaceView.Renderer {
     @Override
     public void onSurfaceCreated(GL10 gl10, EGLConfig eglConfig) {
         Log.i(TAG, "onSurfaceCreated");
-        magicFilter = new GPUImageFilter(MagicFilterType.NONE);
+//        magicFilter = new GPUImageFilter(MagicFilterType.NONE);
+        magicFilter = new GPUImageInputOESFilter(MagicFilterType.MULTI_BLUR);
         magicFilter.init(mContext.getApplicationContext());
 //        magicFilter.setBlurSize(1.0f);
+        gpuImageMultiBlurFilter = new GPUImageMultiBlurFilter(MagicFilterType.MULTI_BLUR);
+        gpuImageMultiBlurFilter.init(mContext.getApplicationContext());
 
         int[] textures = new int[1];
         GLES20.glGenTextures(1, textures, 0);
         mOESTextureId = textures[0];
+
         GLES20.glBindTexture(GL_TEXTURE_EXTERNAL_OES, mOESTextureId);
         surfaceTexture = new SurfaceTexture(mOESTextureId);
         surfaceTexture.setOnFrameAvailableListener(new SurfaceTexture.OnFrameAvailableListener() {
@@ -106,7 +117,10 @@ public class GLSurfaceTexturePreview implements GLSurfaceView.Renderer {
         // TODO: 2021/2/24  暂时设置成一样的 不够严谨
         magicFilter.onDisplaySizeChanged(i, i1);
         magicFilter.onInputSizeChanged(i, i1);
-//        magicFilter.setTexelOffsetSize(i,i1);
+
+        gpuImageMultiBlurFilter.onDisplaySizeChanged(i,i1);
+        gpuImageMultiBlurFilter.onInputSizeChanged(i,i1);
+//        gpuImageMultiBlurFilter.setTexelOffsetSize(i,i1);
 //        mOutputAspectRatio = i > i1 ? (float) i / i1 : (float) i1 / i;
 //        float aspectRatio = mOutputAspectRatio / mInputAspectRatio;
 //        if (i > i1) {
@@ -137,7 +151,9 @@ public class GLSurfaceTexturePreview implements GLSurfaceView.Renderer {
         }
         Log.i(TAG, "mff: --------------end----------------");
         magicFilter.setTextureTransformMatrix(mTransformMatrix);
-        magicFilter.onDrawFrame(mOESTextureId);
+        int textureID = magicFilter.onDrawFrameBuffer(mOESTextureId);
+//        gpuImageMultiBlurFilter.setTextureTransformMatrix(mTransformMatrix);
+        gpuImageMultiBlurFilter.onDrawFrame(textureID);
     }
     public SurfaceTexture getSurfaceTexture() {
         return surfaceTexture;
@@ -145,7 +161,6 @@ public class GLSurfaceTexturePreview implements GLSurfaceView.Renderer {
     public void setSize(int width, int height) {
         mWidth = width;
         mHeight = height;
-
 //        mInputAspectRatio = width > height ?
 //                (float) width / height : (float) width / height;
     }
